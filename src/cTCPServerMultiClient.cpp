@@ -50,10 +50,29 @@ namespace raven
         void cTCPServerMultiClient::readBlock(
             int client)
         {
-            while (true)
+            while (true) {
+
+                // wait for next message from client
+                read(client);
+
+                // check for disconnection
+                if( ! isConnected( client ) )
+                {
+                    // invoke handler with disconnect message
+                    myReadHandler(
+                        client,
+                        std::to_string( client ) +
+                            " client disconnected");
+                    
+                    // exit ( ends thread )
+                    return;
+                }
+
+                // invoke handler with message from client
                 myReadHandler(
-                    read(client),
+                    client,
                     readMsg());
+            }
         }
 
         void cTCPServerMultiClient::acceptHandler(int clientIndex)
@@ -244,21 +263,21 @@ namespace raven
             return count;
         }
 
-        bool cTCPServerMultiClient::isConnected(int client = 0) const
+        bool cTCPServerMultiClient::isConnected(int client) const
         {
             return myConnectSocket[client] != INVALID_SOCKET;
         }
 
-        int maxClient() const
+        int cTCPServerMultiClient::maxClient() const
         {
-            return cTCPServerMultiClient::myConnectSocket.size();
+            return myConnectSocket.size();
         }
 
         std::string cTCPServerMultiClient::readMsg() const
         {
             return std::string(myReadbuf);
         }
-        
+
         int cTCPServerMultiClient::addConnectedSocket(SOCKET s)
         {
             for (int kc = 0; kc < myConnectSocket.size(); kc++)

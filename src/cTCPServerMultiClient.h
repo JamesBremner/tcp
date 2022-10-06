@@ -7,7 +7,7 @@ namespace raven
 {
     namespace set {
 
-/// A TCP server handling multiple client simultaineously
+/// A TCP server handling multiple clients simultaineously
 
 class cTCPServerMultiClient
 {
@@ -58,9 +58,20 @@ private:
     int addConnectedSocket( SOCKET s );
 
     void acceptBlock();
+
+    /** Wait for messages from client
+     * 
+     * runs in its own thread, invoking the read handler when a message is recvd
+     * 
+     * Does not return until the client disconnects
+     */
     void readBlock( int client );
 
-    void acceptHandler(int clientIndex);
+    /** Starts readblock in its own thread
+     * 
+     * returns immediatly
+     */
+    void acceptHandler(int client);
 
     /// Wait for client connection request
     void acceptClient();
