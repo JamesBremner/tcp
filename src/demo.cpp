@@ -17,6 +17,8 @@ public:
     cGUI();
 
     void status(const std::string &msg);
+    void status1(const std::string &msg);
+    void status2(const std::string &msg);
 
 private:
     wex::radiobutton &rbClient;
@@ -24,6 +26,8 @@ private:
     wex::radiobutton &rbServerM;
     wex::button &bnConnect;
     wex::label &lbStatus;
+    wex::label &lbStatus1;
+    wex::label &lbStatus2;
 
     wex::tcp &myTCP;
 
@@ -39,15 +43,23 @@ void readHandler(
     int client,
     const std::string &msg)
 {
-    std::cout << "msg from client " << client
+    std::stringstream ss;
+    ss << "msg from client " << client
               << ":\n" 
               << msg << "\n";
+    std::cout << ss.str();
 
-    theGUI->status( 
-        "msg from client " +
-        std::to_string( client ) +
-              + ":\n" 
-              + msg );
+    switch(client ) {
+        case 0:
+            theGUI->status1( ss.str());
+            break;
+        case 1:
+            theGUI->status2( ss.str());
+            break;
+        default:
+            theGUI->status( ss.str());
+            break;
+    }
 }
 
 cGUI::cGUI()
@@ -59,6 +71,8 @@ cGUI::cGUI()
       rbServerM(wex::maker::make<wex::radiobutton>(fm)),
       bnConnect(wex::maker::make<wex::button>(fm)),
       lbStatus(wex::maker::make<wex::label>(fm)),
+      lbStatus1(wex::maker::make<wex::label>(fm)),
+      lbStatus2(wex::maker::make<wex::label>(fm)),
       myTCP(wex::maker::make<wex::tcp>(fm))
 {
     rbClient.move(50, 50, 100, 30);
@@ -71,6 +85,10 @@ cGUI::cGUI()
     bnConnect.text("Connect");
     lbStatus.move(50, 150, 300, 50);
     lbStatus.text("");
+    lbStatus1.move(50, 250, 300, 50);
+    lbStatus1.text("client 0 not connected");
+    lbStatus2.move(50, 350, 300, 50);
+    lbStatus2.text("client 2 not connected");
 
     bnConnect.events()
         .click(
@@ -128,6 +146,16 @@ void cGUI::status(const std::string &msg)
     lbStatus.text(msg);
     lbStatus.update();
 }
+void cGUI::status1(const std::string &msg)
+{
+    lbStatus1.text(msg);
+    lbStatus1.update();
+}
+void cGUI::status2(const std::string &msg)
+{
+    lbStatus2.text(msg);
+    lbStatus2.update();
+}
 void cGUI::clientStart()
 {
     rbServer1.show(false);
@@ -152,11 +180,14 @@ void cGUI::serverMStart()
 {
     rbClient.show(false);
     rbServer1.show(false);
-    fm.update();
+
+    std::string port("27678");
     serverM.start(
-        "27678",
+        port,
         readHandler,
         2);
+
+    status( "Listening for clients on port " + port );
 }
 
 void cGUI::connect()

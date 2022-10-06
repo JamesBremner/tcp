@@ -36,8 +36,15 @@ namespace raven
 
         void cTCPServerMultiClient::acceptBlock()
         {
-            while (true)
-                acceptHandler(acceptClientMultiple());
+            while (true) {
+                int client = acceptClientMultiple();
+                if( client < 0 ) {
+                    std::this_thread::sleep_for (
+                        std::chrono::milliseconds(25));
+                    continue;
+                }
+                acceptHandler(client);
+            }
         }
         void cTCPServerMultiClient::readBlock(
             int client)
@@ -205,6 +212,10 @@ namespace raven
 
         int cTCPServerMultiClient::acceptClientMultiple()
         {
+            if( countConnectedClients() >= myConnectSocket.size() ) {
+                // maximum clients already connected
+                return -2;
+            }
             std::cout << "cTCP listening for multiple clients on port "
                       << myServerPort << "\n";
 
@@ -276,8 +287,10 @@ namespace raven
         int cTCPServerMultiClient::read(int client)
         {
             std::cout << "cTCP::read " << client << "\n";
-            if (myConnectSocket[client] == INVALID_SOCKET)
-                throw std::runtime_error("cTCP read on invalid socket");
+            if (myConnectSocket[client] == INVALID_SOCKET) {
+                std::cout << "cTCP read on invalid socket\n";
+                return -1;
+            }
 
             // clear old message
             ZeroMemory(myReadbuf, 1024);
