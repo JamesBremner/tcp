@@ -7,74 +7,41 @@ namespace raven
 {
     namespace set {
 
-/// C++ wrapper for winsock ( TCP communications )
+/// A TCP server handling multiple client simultaineously
 
 class cTCPServerMultiClient
 {
 public:
     cTCPServerMultiClient();
 
-    /// @brief configure server
+    /// @brief start server
     /// @param[in] ServerPort listens for clients
+    /// @param[in] readHandler handler to call when mesage received from client
     /// @param[in] maxClient max number of clients, default 1
+
     void start(
         const std::string &ServerPort,
         std::function<void(int,const std::string&)> readHandler,
         int maxClient = 1 );
     
 
-    /** Configure serverWait() blocking
-     * 
-     * true: keep trying until connection made ( default on construction )
-     * false: if connection refused return after one attempt
-     */
-    void RetryConnectServer( bool f )
-    {
-        myfRetryServer = f;
-    }
-    /** Connect to server
-     * 
-     * Throws exeption if there is a configuration problem
-     * Otherwise blocks until connection
-     */
-    bool serverWait();
-
-    /// Wait for client connection request
-    void acceptClient();
-
-    /// Send message to peer
-    void send(const std::string &msg);
-    void send( const std::vector< unsigned char >& msg );
-
-    /// Wait for message from peer
-    int read( int client = 0 );
+    /// Send message to client
+    void send(
+        const std::string &msg,
+        int client = 0);
+    void send( 
+        const std::vector< unsigned char >& msg,
+        int client = 0 );
 
     /// Get last message from peer
-    std::string readMsg() const
-    {
-        return std::string(myReadbuf);
-    }
+    std::string readMsg() const;
 
     /// True if peer connected
-    bool isConnected( int client = 0) const
-    {
-        return myConnectSocket[client] != INVALID_SOCKET;
-    }
+    bool isConnected( int client = 0) const;
 
     int countConnectedClients();
 
-    int maxClient() const
-    {
-        return myConnectSocket.size();
-    }
-
-    void acceptSocket();
-
-    int acceptClientMultiple();
-
-    int clientPort( int client );
-
-    SOCKET clientSocket( int client );
+    int maxClient() const;
 
 private:
     std::string myServerIP;
@@ -88,21 +55,27 @@ private:
 
     void initWinSock();
 
-    /** Connect to server
-     * 
-     * Throws exception on configuration error
-     * 
-     * Returns true on success  of connection
-     * Returns false if connection timed out
-     */
-    bool connectToServer();
-
     int addConnectedSocket( SOCKET s );
 
     void acceptBlock();
     void readBlock( int client );
 
     void acceptHandler(int clientIndex);
+
+    /// Wait for client connection request
+    void acceptClient();
+
+    int acceptClientMultiple();
+
+    /// Wait for message from peer
+    int read( int client = 0 );
+
+    /// @brief Construct socker that listens for client connetion requests
+    void acceptSocketCtor();
+
+    int clientPort( int client );
+
+    SOCKET clientSocket( int client );
 
 };
 

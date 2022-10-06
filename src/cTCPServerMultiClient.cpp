@@ -15,31 +15,32 @@ namespace raven
 
         void cTCPServerMultiClient::start(
             const std::string &ServerPort,
-            std::function<void(int,const std::string&)> readHandler,
+            std::function<void(int, const std::string &)> readHandler,
             int maxClient)
         {
             myServerPort = ServerPort;
             myConnectSocket.resize(maxClient, INVALID_SOCKET);
             myReadHandler = readHandler;
 
-            acceptSocket();
+            acceptSocketCtor();
 
-            //std::thread t(acceptBlock, this);
+            // std::thread t(acceptBlock, this);
             std::thread t(
                 [&]
                 {
                     acceptBlock();
                 });
             t.detach();
-
         }
 
         void cTCPServerMultiClient::acceptBlock()
         {
-            while (true) {
+            while (true)
+            {
                 int client = acceptClientMultiple();
-                if( client < 0 ) {
-                    std::this_thread::sleep_for (
+                if (client < 0)
+                {
+                    std::this_thread::sleep_for(
                         std::chrono::milliseconds(25));
                     continue;
                 }
@@ -58,14 +59,7 @@ namespace raven
         void cTCPServerMultiClient::acceptHandler(int clientIndex)
         {
             std::cout << "Accepted client " << clientIndex << "\n";
-             std::thread t(readBlock, this, clientIndex );
-            // std::thread t( 
-            //     [this](int client)
-            //     {
-            //         myReadHandler(
-            //             client,
-            //             readMsg());
-            //     });
+            std::thread t(readBlock, this, clientIndex);
             t.detach();
         }
 
@@ -78,7 +72,7 @@ namespace raven
             }
         }
 
-        void cTCPServerMultiClient::acceptSocket()
+        void cTCPServerMultiClient::acceptSocketCtor()
         {
             if (myServerPort.empty())
                 throw std::runtime_error(
@@ -212,7 +206,8 @@ namespace raven
 
         int cTCPServerMultiClient::acceptClientMultiple()
         {
-            if( countConnectedClients() >= myConnectSocket.size() ) {
+            if (countConnectedClients() >= myConnectSocket.size())
+            {
                 // maximum clients already connected
                 return -2;
             }
@@ -249,6 +244,21 @@ namespace raven
             return count;
         }
 
+        bool cTCPServerMultiClient::isConnected(int client = 0) const
+        {
+            return myConnectSocket[client] != INVALID_SOCKET;
+        }
+
+        int maxClient() const
+        {
+            return cTCPServerMultiClient::myConnectSocket.size();
+        }
+
+        std::string cTCPServerMultiClient::readMsg() const
+        {
+            return std::string(myReadbuf);
+        }
+        
         int cTCPServerMultiClient::addConnectedSocket(SOCKET s)
         {
             for (int kc = 0; kc < myConnectSocket.size(); kc++)
@@ -287,7 +297,8 @@ namespace raven
         int cTCPServerMultiClient::read(int client)
         {
             std::cout << "cTCP::read " << client << "\n";
-            if (myConnectSocket[client] == INVALID_SOCKET) {
+            if (myConnectSocket[client] == INVALID_SOCKET)
+            {
                 std::cout << "cTCP read on invalid socket\n";
                 return -1;
             }
@@ -310,107 +321,26 @@ namespace raven
             }
             return client;
         }
-        bool cTCPServerMultiClient::serverWait()
+
+        void cTCPServerMultiClient::send(
+            const std::string &msg,
+            int client)
         {
-            while (1)
-            {
-                connectToServer();
-                if (isConnected())
-                {
-                    return true;
-                }
-                if (!myfRetryServer)
-                    return false;
-            }
-        }
-        bool cTCPServerMultiClient::connectToServer()
-        {
-            if (myServerPort.empty())
-                throw std::runtime_error("Server not configured");
-
-            initWinSock();
-
-            struct addrinfo *result = NULL,
-                            hints;
-
-            ZeroMemory(&hints, sizeof(hints));
-            hints.ai_family = AF_UNSPEC;
-            hints.ai_socktype = SOCK_STREAM;
-            hints.ai_protocol = IPPROTO_TCP;
-
-            if (getaddrinfo(
-                    myServerIP.c_str(),
-                    myServerPort.c_str(),
-                    &hints, &result))
-            {
-                throw std::runtime_error("getaddrinfo failed");
-            }
-
-            myConnectSocket[0] = ::socket(
-                result->ai_family,
-                result->ai_socktype,
-                result->ai_protocol);
-            if (myConnectSocket[0] == INVALID_SOCKET)
-            {
-                throw std::runtime_error("socket failed");
-            }
-
-            // std::cout << "attempting connect\n";
-            int connect_return;
-            try
-            {
-                connect_return = ::connect(
-                    myConnectSocket[0],
-                    result->ai_addr,
-                    (int)result->ai_addrlen);
-            }
-            catch (std::runtime_error &e)
-            {
-                std::cout << myServerIP << ":" << myServerPort
-                          << " socket connect threw exception";
-                connect_return = SOCKET_ERROR;
-            }
-            if (connect_return == SOCKET_ERROR)
-            {
-                int err = WSAGetLastError();
-                closesocket(myConnectSocket[0]);
-                myConnectSocket[0] = INVALID_SOCKET;
-                if (err == 10060)
-                {
-                    std::cout << "connect timed out\n";
-                    return false;
-                }
-                else if (err == 10061)
-                {
-                    std::cout << myServerIP << ":" << myServerPort
-                              << " No connection could be made because the target machine actively refused it. "
-                                 " Generally, it happens that something is preventing a connection to the port or hostname. "
-                                 " Either there is a firewall blocking the connection "
-                                 " or the process that is hosting the service is not listening on that specific port.\n";
-                    return false;
-                }
-                else
-                    std::cout << "connect failed error: " << std::to_string(err);
-                return false;
-            }
-
-            return true;
-        }
-        void cTCPServerMultiClient::send(const std::string &msg)
-        {
-            if (myConnectSocket[0] == INVALID_SOCKET)
+            if (myConnectSocket[client] == INVALID_SOCKET)
                 throw std::runtime_error("send on invalid socket");
             ::send(
-                myConnectSocket[0],
+                myConnectSocket[client],
                 msg.c_str(),
                 (int)msg.length(), 0);
         }
-        void cTCPServerMultiClient::send(const std::vector<unsigned char> &msg)
+        void cTCPServerMultiClient::send(
+            const std::vector<unsigned char> &msg,
+            int client)
         {
-            if (myConnectSocket[0] == INVALID_SOCKET)
+            if (myConnectSocket[client] == INVALID_SOCKET)
                 throw std::runtime_error("send on invalid socket");
             ::send(
-                myConnectSocket[0],
+                myConnectSocket[client],
                 (char *)msg.data(),
                 msg.size(), 0);
         }
