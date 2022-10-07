@@ -9,7 +9,7 @@
 #include "cTCPServerMultiClient.h"
 #include "cStarterGUI.h"
 
-raven::set::cTCPServerMultiClient serverM;
+
 
 class cGUI : public cStarterGUI
 {
@@ -19,6 +19,11 @@ public:
     void status(const std::string &msg);
     void status1(const std::string &msg);
     void status2(const std::string &msg);
+
+    void eventHandler(
+        int client,
+        raven::set::cTCPServerMultiClient::eEvent type,
+        const std::string &msg);
 
 private:
     wex::radiobutton &rbClient;
@@ -30,6 +35,7 @@ private:
     wex::label &lbStatus2;
 
     wex::tcp &myTCP;
+    raven::set::cTCPServerMultiClient serverM;
 
     void clientStart();
     void server1Start();
@@ -37,14 +43,14 @@ private:
     void connect();
 };
 
-cGUI *theGUI;
+//cGUI *theGUI;
 
-void readHandler(
+void cGUI::eventHandler(
     int client,
     raven::set::cTCPServerMultiClient::eEvent type,
     const std::string &msg)
 {
-    switch (type)
+       switch (type)
     {
     case raven::set::cTCPServerMultiClient::eEvent::read:
     {
@@ -57,13 +63,13 @@ void readHandler(
         switch (client)
         {
         case 0:
-            theGUI->status1(ss.str());
+            status1(ss.str());
             break;
         case 1:
-            theGUI->status2(ss.str());
+            status2(ss.str());
             break;
         default:
-            theGUI->status(ss.str());
+            status(ss.str());
             break;
         }
     }
@@ -73,11 +79,11 @@ void readHandler(
         switch (client)
         {
         case 0:
-            theGUI->status1(
+            status1(
                 "client 0 connected");
             break;
         case 1:
-            theGUI->status2(
+            status2(
                 "client 1 connected");
             break;
         }
@@ -88,11 +94,11 @@ void readHandler(
         switch (client)
         {
         case 0:
-            theGUI->status1(
+            status1(
                 "client 0 disconnected");
             break;
         case 1:
-            theGUI->status2(
+            status2(
                 "client 1 disconnected");
             break;
         }
@@ -118,7 +124,7 @@ cGUI::cGUI()
     rbServer1.move(200, 50, 150, 30);
     rbServer1.text("Server ( 1 client )");
     rbServerM.move(400, 50, 200, 30);
-    rbServerM.text("Server ( Many clients )");
+    rbServerM.text("Server ( 2 clients )");
     bnConnect.move(50, 100, 100, 30);
     bnConnect.text("Connect");
     lbStatus.move(50, 150, 300, 50);
@@ -178,6 +184,7 @@ cGUI::cGUI()
                      } });
 
     show();
+    run();
 }
 void cGUI::status(const std::string &msg)
 {
@@ -216,14 +223,28 @@ void cGUI::server1Start()
 }
 void cGUI::serverMStart()
 {
+    // hide unused options
     rbClient.show(false);
     rbServer1.show(false);
 
+    // server configuration
     std::string port("27678");
+    int maxClient = 2;
+
+    // construct function object from cGUI::eventHandler
+    // this can be passed to server so it can run the class method
+    auto f = std::bind(
+            &cGUI::eventHandler, this,
+            std::placeholders::_1,
+            std::placeholders::_2,
+            std::placeholders::_3);
+
+    // start server listening for clients in its own thread
+    // call eventHandler in the client threads when something happens
     serverM.start(
-        port,
-        readHandler,
-        2);
+        port,       // port to listen for client connection requests
+        f,          // even handler function object
+        maxClient); // maximum number of simultaineous cleients
 
     status("Listening for clients on port " + port);
 }
@@ -246,7 +267,6 @@ void cGUI::connect()
 
 main()
 {
-    theGUI = new cGUI();
-    theGUI->run();
+    cGUI theGUI;
     return 0;
 }
