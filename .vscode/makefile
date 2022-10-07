@@ -23,19 +23,19 @@ CCflags = -std=c++17 $(OPT) -D_mingw_
 # sources
 OBJ_demo = \
 	$(ODIR)/demo.o \
+	$(ODIR)/cGUI.o \
 	$(ODIR)/cTCP.o \
 	$(ODIR)/cTCPServerMultiClient.o
 
 ### COMPILE
 
-$(ODIR)/%.o: %.cpp  
+$(ODIR)/%.o: %.cpp ../src/cGUI.h
 	g++  $(CCflags) \
 	-c -o $@ $< $(INCS)
 
 demo: $(OBJ_demo)
-	g++ $(OPT) \
-	-o bin/demo.exe $^  \
-	$(static_link_flags) $(LIBS)
+	g++  -o bin/demo.exe \
+	$(OPT) $^  $(static_link_flags) $(LIBS)
 
 .PHONY: clean
 clean:
