@@ -37,28 +37,66 @@ private:
     void connect();
 };
 
-cGUI * theGUI;
+cGUI *theGUI;
 
 void readHandler(
     int client,
+    raven::set::cTCPServerMultiClient::eEvent type,
     const std::string &msg)
 {
-    std::stringstream ss;
-    ss << "msg from client " << client
-              << ":\n" 
-              << msg << "\n";
-    std::cout << ss.str();
+    switch (type)
+    {
+    case raven::set::cTCPServerMultiClient::eEvent::read:
+    {
+        std::stringstream ss;
+        ss << "msg from client " << client
+           << ":\n"
+           << msg << "\n";
+        std::cout << ss.str();
 
-    switch(client ) {
+        switch (client)
+        {
         case 0:
-            theGUI->status1( ss.str());
+            theGUI->status1(ss.str());
             break;
         case 1:
-            theGUI->status2( ss.str());
+            theGUI->status2(ss.str());
             break;
         default:
-            theGUI->status( ss.str());
+            theGUI->status(ss.str());
             break;
+        }
+    }
+    break;
+
+    case raven::set::cTCPServerMultiClient::eEvent::accept:
+        switch (client)
+        {
+        case 0:
+            theGUI->status1(
+                "client 0 connected");
+            break;
+        case 1:
+            theGUI->status2(
+                "client 1 connected");
+            break;
+        }
+        break;
+        break;
+
+    case raven::set::cTCPServerMultiClient::eEvent::disconnect:
+        switch (client)
+        {
+        case 0:
+            theGUI->status1(
+                "client 0 disconnected");
+            break;
+        case 1:
+            theGUI->status2(
+                "client 1 disconnected");
+            break;
+        }
+        break;
     }
 }
 
@@ -85,9 +123,9 @@ cGUI::cGUI()
     bnConnect.text("Connect");
     lbStatus.move(50, 150, 300, 50);
     lbStatus.text("");
-    lbStatus1.move(50, 250, 300, 50);
+    lbStatus1.move(50, 250, 300, 200);
     lbStatus1.text("client 0 not connected");
-    lbStatus2.move(50, 350, 300, 50);
+    lbStatus2.move(400, 250, 300, 200);
     lbStatus2.text("client 2 not connected");
 
     bnConnect.events()
@@ -187,7 +225,7 @@ void cGUI::serverMStart()
         readHandler,
         2);
 
-    status( "Listening for clients on port " + port );
+    status("Listening for clients on port " + port);
 }
 
 void cGUI::connect()

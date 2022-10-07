@@ -12,16 +12,60 @@ namespace raven
 class cTCPServerMultiClient
 {
 public:
+
+    enum class eEvent
+    {
+        accept,
+        read,
+        disconnect,
+    };
+
+    typedef std::function<void(int,eEvent,const std::string&)>
+        eventHandler_t;
+
     cTCPServerMultiClient();
 
-    /// @brief start server
-    /// @param[in] ServerPort listens for clients
-    /// @param[in] readHandler handler to call when mesage received from client
-    /// @param[in] maxClient max number of clients, default 1
+    /** start server
+
+     @param[in] ServerPort listens for clients
+     @param[in] eventHandler handler to call when something happens
+     @param[in] maxClient max number of clients, default 1
+
+     Starts listening for client connection requests.
+
+     The eventHandler function will be called when
+     - a client connects
+     - a message is received from client
+     - a client diconnects
+     and runs in the thread connected to the client
+ 
+     eventHandler signature:  void h( 
+        int client,
+        eEvent type,
+        const std::string& msg )
+
+     client the index among connected clients of client that sent the message
+     type of event
+     msg the message received from the client
+
+     Threading
+
+    When the server starts, 
+        a new threas is started that listens for connection requests.
+        This thread runs until the application exits
+    When a new client connects,
+        a new thread is started that listens to the client.
+        This thread runs until the client disconnects
+        The eventHandler runs in this thread
+
+
+     This method returns immediatly, leaving the client connect listening thread running.
+
+     */
 
     void start(
         const std::string &ServerPort,
-        std::function<void(int,const std::string&)> readHandler,
+        eventHandler_t eventHandler,
         int maxClient = 1 );
     
 
@@ -44,19 +88,24 @@ public:
     int maxClient() const;
 
 private:
-    std::string myServerIP;
+
     std::string myServerPort;
     SOCKET myAcceptSocket;  //< socket listening for clients
-    std::vector<SOCKET> myConnectSocket; //< sockets connected to another tcp
+    std::vector<SOCKET> myConnectSocket; //< sockets connected to clients
     std::string myRemoteAddress;
     char myReadbuf[1024];
-    bool myfRetryServer;
-    std::function<void(int,const std::string&)> myReadHandler;
+    eventHandler_t myEventHandler;
 
     void initWinSock();
 
     int addConnectedSocket( SOCKET s );
 
+    /** Wait for client connection requests
+     * 
+     * runs in its own thread
+     * 
+     * Never returns
+     */
     void acceptBlock();
 
     /** Wait for messages from client
@@ -67,15 +116,7 @@ private:
      */
     void readBlock( int client );
 
-    /** Starts readblock in its own thread
-     * 
-     * returns immediatly
-     */
-    void acceptHandler(int client);
-
     /// Wait for client connection request
-    void acceptClient();
-
     int acceptClientMultiple();
 
     /// Wait for message from peer
