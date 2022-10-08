@@ -27,11 +27,16 @@ OBJ_demo = \
 	$(ODIR)/cTCP.o \
 	$(ODIR)/cTCPServerMultiClient.o
 
+headers = \
+	../src/cGUI.h \
+	../src/cTCPServerMultiClient.h
+
 ### COMPILE
 
-$(ODIR)/%.o: %.cpp ../src/cGUI.h
-	g++  $(CCflags) \
-	-c -o $@ $< $(INCS)
+$(ODIR)/%.o: %.cpp $(headers)
+	g++ -c  $<  \
+	-o $@ \
+	$(CCflags) $(INCS)
 
 demo: $(OBJ_demo)
 	g++  -o bin/demo.exe \

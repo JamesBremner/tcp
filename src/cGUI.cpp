@@ -4,70 +4,30 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <winsock2.h>
 #include <wex.h>
 #include "tcp.h"
 #include "cTCPServerMultiClient.h"
 #include "cStarterGUI.h"
 #include "cGUI.h"
 
-
-
-
-
-cProcessor::cProcessor()
-{
-    std::thread t(sharedThread, this);
-    t.detach();
-}
-
-void cProcessor::ProcessInClientThread(
+std::string clientMsgProcessor(
     int client,
     const std::string &msg)
 {
-    process(cJob(client, msg));
-}
+    int jobTime = atoi(msg.c_str());
+    if (!jobTime)
+        return "";
 
-void cProcessor::ProcessInSharedThread(
-    int client,
-    const std::string &msg)
-{
-    myJobQ.push(cJob(client, msg));
-}
-
-void cProcessor::sharedThread()
-{
-    while (true)
-    {
-        if (myJobQ.empty())
-        {
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(100));
-            continue;
-        }
-        process(myJobQ.front());
-        myJobQ.pop();
-    }
-}
-
-void cProcessor::process(const cJob &job)
-{
-    int jobTime = atoi(job.msg.c_str());
-    if( ! jobTime )
-        return;
-
-    std::cout << "start job for client " << job.client
-              << " " << job.msg << "\n";
+    std::cout << "start job for client " << client
+              << " " << msg << "\n";
     std::this_thread::sleep_for(std::chrono::seconds(
-        jobTime ));
-    std::cout << "end job for client " << job.client
-              << " " << job.msg << "\n";
+        jobTime));
+    std::cout << "end job for client " << client
+              << " " << msg << "\n";
     std::string reply(
-        "end job for client "
-        + std::to_string( job.client )
-        + " " + job.msg    );
-    myReplyHandler(
-        job.client,
-        reply );
+        "end job for client " + std::to_string(client) + " " + msg);
+    return reply;
 }
 
 void cGUI::eventHandler(
@@ -98,9 +58,6 @@ void cGUI::eventHandler(
             break;
         }
 
-        myProcessor.ProcessInSharedThread( 
-            client,
-            msg );
     }
     break;
 
@@ -165,8 +122,6 @@ cGUI::cGUI()
 
     registerEventHandlers();
 
-    serverM.lineAccumulator( true );
-
     show();
     run();
 }
@@ -221,11 +176,6 @@ void cGUI::registerEventHandlers()
                          myTCP.read();
                      } });
 
-    myProcessor.registerReplyHandler(
-        [this](int client, const std::string& msg)
-        {
-            serverM.send( msg, client );
-        });
 }
 void cGUI::status(const std::string &msg)
 {
@@ -271,21 +221,29 @@ void cGUI::serverMStart()
     // server configuration
     std::string port("27678");
     int maxClient = 2;
+    serverM.lineAccumulator(true);
+    serverM.sharedProcessingThread(true);
 
     // construct function object from cGUI::eventHandler
     // this can be passed to server so it can run the class method
-    auto f = std::bind(
+    auto ef = std::bind(
         &cGUI::eventHandler, this,
         std::placeholders::_1,
         std::placeholders::_2,
         std::placeholders::_3);
 
+    auto pf = std::bind(
+        &clientMsgProcessor,
+        std::placeholders::_1,
+        std::placeholders::_2);
+
     // start server listening for clients in its own thread
     // call eventHandler in the client threads when something happens
     serverM.start(
-        port,       // port to listen for client connection requests
-        f,          // even handler function object
-        maxClient); // maximum number of simultaineous cleients
+        port, // port to listen for client connection requests
+        ef,   // event handler function object
+        pf,
+        maxClient); // maximum number of simultaineous clients
 
     status("Listening for clients on port " + port);
 }

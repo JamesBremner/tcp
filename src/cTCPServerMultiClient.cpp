@@ -17,11 +17,13 @@ namespace raven
         void cTCPServerMultiClient::start(
             const std::string &ServerPort,
             std::function<void(int, eEvent, const std::string &)> readHandler,
+            processor_t processor,
             int maxClient)
         {
             myServerPort = ServerPort;
             myConnectSocket.resize(maxClient, INVALID_SOCKET);
             myEventHandler = readHandler;
+            myProcessor = processor;
 
             // construct socket where server listens for client connection requests
             acceptSocketCtor();
@@ -36,6 +38,9 @@ namespace raven
 
             std::thread t(acceptBlock, this);
             t.detach();
+
+            std::thread t2(jobThread, this);
+            t2.detach();
         }
 
         void cTCPServerMultiClient::acceptBlock()
@@ -72,7 +77,6 @@ namespace raven
 
             while (true)
             {
-
                 // wait for next message from client
                 read(client);
 
@@ -99,6 +103,41 @@ namespace raven
                     client,
                     eEvent::read,
                     line);
+
+                if (mySharedProcessingThread)
+                {
+                    myJobQ.push(cJob(client, line));
+                }
+                else
+                {
+                    send(
+                        myProcessor(client, line),
+                        client);
+                }
+            }
+        }
+
+        void cTCPServerMultiClient::jobThread()
+        {
+            while (true)
+            {
+                // check for waiting job
+                if (myJobQ.empty())
+                {
+                    // let other processes run
+                    std::this_thread::sleep_for(
+                        std::chrono::milliseconds(100));
+                    continue;
+                }
+
+                // process job at front of queue
+                auto &j = myJobQ.front();
+                send(
+                    myProcessor(
+                        j.client,
+                        j.msg),
+                    j.client);
+                myJobQ.pop();
             }
         }
 
@@ -367,7 +406,7 @@ namespace raven
         }
         int cTCPServerMultiClient::read(int client)
         {
-            //std::cout << "cTCP::read " << client << "\n";
+            // std::cout << "cTCP::read " << client << "\n";
             if (myConnectSocket[client] == INVALID_SOCKET)
             {
                 std::cout << "cTCP read on invalid socket\n";
