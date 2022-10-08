@@ -20,6 +20,8 @@ private:
     wex::radiobutton &rbClient;
     wex::radiobutton &rbServer1;
     wex::radiobutton &rbServerM;
+    wex::checkbox &cbLineAccumulator;
+    wex::checkbox &cbJobThread;
     wex::button &bnConnect;
     wex::label &lbStatus;
     wex::label &lbStatus1;
@@ -27,7 +29,6 @@ private:
 
     wex::tcp &myTCP;
     raven::set::cTCPServerMultiClient serverM;
-    //cProcessor myProcessor;
 
     void registerEventHandlers();
 

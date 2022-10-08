@@ -99,18 +99,26 @@ cGUI::cGUI()
       rbClient(wex::maker::make<wex::radiobutton>(fm)),
       rbServer1(wex::maker::make<wex::radiobutton>(fm)),
       rbServerM(wex::maker::make<wex::radiobutton>(fm)),
+      cbJobThread(wex::maker::make<wex::checkbox>(fm)),
+      cbLineAccumulator(wex::maker::make<wex::checkbox>(fm)),
       bnConnect(wex::maker::make<wex::button>(fm)),
       lbStatus(wex::maker::make<wex::label>(fm)),
       lbStatus1(wex::maker::make<wex::label>(fm)),
       lbStatus2(wex::maker::make<wex::label>(fm)),
       myTCP(wex::maker::make<wex::tcp>(fm))
 {
-    rbClient.move(50, 50, 100, 30);
+    rbClient.move(50, 30, 100, 30);
     rbClient.text("Client");
-    rbServer1.move(200, 50, 150, 30);
+    rbServer1.move(200, 30, 150, 30);
     rbServer1.text("Server ( 1 client )");
-    rbServerM.move(400, 50, 200, 30);
+    rbServerM.move(400, 30, 200, 30);
     rbServerM.text("Server ( 2 clients )");
+    cbLineAccumulator.move(400,60,200,30);
+    cbLineAccumulator.text("Complete Lines");
+    cbLineAccumulator.check();
+    cbJobThread.move(400,90,200,30);
+    cbJobThread.text("Job Thread");
+    cbJobThread.check();
     bnConnect.move(50, 100, 100, 30);
     bnConnect.text("Connect");
     lbStatus.move(50, 150, 300, 50);
@@ -221,8 +229,10 @@ void cGUI::serverMStart()
     // server configuration
     std::string port("27678");
     int maxClient = 2;
-    serverM.lineAccumulator(true);
-    serverM.sharedProcessingThread(true);
+    serverM.lineAccumulator(
+        cbLineAccumulator.isChecked()    );
+    serverM.sharedProcessingThread(
+        cbJobThread.isChecked()    );
 
     // construct function object from cGUI::eventHandler
     // this can be passed to server so it can run the class method

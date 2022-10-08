@@ -54,12 +54,14 @@ namespace raven
              Threading
 
             When the server starts,
-                a new threas is started that listens for connection requests.
-                This thread runs until the application exits
+                - a new thread is started that listens for connection requests.
+                    runs until the application exits
+                - a new thread is started that checks for jobs waiting to be processed
+                    runs until the application exits
             When a new client connects,
-                a new thread is started that listens to the client.
-                This thread runs until the client disconnects
-                The eventHandler runs in this thread
+                - a new thread is started that listens to the client.
+                    This thread runs until the client disconnects
+                    The eventHandler runs in this thread
 
 
              This method returns immediatly, leaving the client connect listening thread running.

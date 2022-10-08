@@ -16,7 +16,7 @@ namespace raven
 
         void cTCPServerMultiClient::start(
             const std::string &ServerPort,
-            std::function<void(int, eEvent, const std::string &)> readHandler,
+            eventHandler_t readHandler,
             processor_t processor,
             int maxClient)
         {
@@ -39,6 +39,7 @@ namespace raven
             std::thread t(acceptBlock, this);
             t.detach();
 
+            /* start thread that processes jobs */
             std::thread t2(jobThread, this);
             t2.detach();
         }
