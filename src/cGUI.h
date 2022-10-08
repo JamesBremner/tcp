@@ -67,10 +67,12 @@ private:
 
     std::function<void(int,const std::string&)> myReplyHandler;
 
+    /// @brief runs in its own thread, processing jobs one by one
+    
     void sharedThread();
 
     /// @brief process a job
-    /// @param job the job submiited by a client
+    /// @param job the job submited by a client
 
     void process(const cJob &job);
 };

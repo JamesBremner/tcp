@@ -10,6 +10,7 @@ namespace raven
 
         cTCPServerMultiClient::cTCPServerMultiClient()
         {
+            myFrameLines = true;
             myConnectSocket.resize(1, INVALID_SOCKET);
         }
 
@@ -88,12 +89,49 @@ namespace raven
                     return;
                 }
 
+                // get line received if available and option set
+                auto line = nextLine(readMsg());
+                if (line.empty())
+                    continue;
+
                 // invoke handler with message from client
                 myEventHandler(
                     client,
                     eEvent::read,
-                    readMsg());
+                    line);
             }
+        }
+
+        std::string cTCPServerMultiClient::nextLine(const std::string &msg)
+        {
+            static std::string msg_acc = "";
+
+            if (!myFrameLines)
+                return msg;
+
+            for (char c : msg)
+            {
+                if ((int)((unsigned char)c) == 0xFF)
+                {
+                    for (char c : msg_acc)
+                        std::cout << std::hex << (int)((unsigned char)c) << " ";
+                    std::cout << std::endl;
+                    std::cout << "garbage received, ignoring it\n";
+                    return "";
+                }
+            }
+
+            msg_acc += msg;
+            std::cout << "msg_acc " << msg_acc << "\n";
+            int p = msg_acc.find_first_of("\n\r");
+            if (p == -1)
+                return "";
+
+            // complete line received
+            std::string ret = msg_acc.substr(0, p) + "\n";
+            msg_acc = msg_acc.substr(
+                msg_acc.find_last_of("\n\r") + 1);
+            return ret;
         }
 
         void cTCPServerMultiClient::initWinSock()
@@ -329,7 +367,7 @@ namespace raven
         }
         int cTCPServerMultiClient::read(int client)
         {
-            std::cout << "cTCP::read " << client << "\n";
+            //std::cout << "cTCP::read " << client << "\n";
             if (myConnectSocket[client] == INVALID_SOCKET)
             {
                 std::cout << "cTCP read on invalid socket\n";

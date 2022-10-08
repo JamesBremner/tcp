@@ -165,6 +165,8 @@ cGUI::cGUI()
 
     registerEventHandlers();
 
+    serverM.lineAccumulator( true );
+
     show();
     run();
 }

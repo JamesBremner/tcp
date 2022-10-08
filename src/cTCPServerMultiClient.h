@@ -87,14 +87,22 @@ public:
 
     int maxClient() const;
 
+    // set line accumulation option
+    void lineAccumulator( bool f )
+    {
+        myFrameLines = f;
+    }
+
 private:
 
+    bool myFrameLines;
     std::string myServerPort;
     SOCKET myAcceptSocket;  //< socket listening for clients
     std::vector<SOCKET> myConnectSocket; //< sockets connected to clients
     std::string myRemoteAddress;
     char myReadbuf[1024];
     eventHandler_t myEventHandler;
+
 
     void initWinSock();
 
@@ -122,8 +130,14 @@ private:
     /// Wait for message from peer
     int read( int client = 0 );
 
-    /// @brief Construct socker that listens for client connetion requests
+    /// @brief Construct socket that listens for client connetion requests
     void acceptSocketCtor();
+
+    /** Accumulate complete lines ( terminated by \n or \t pt \m\r )
+     * @param msg message received
+     * @return line received, "" if no line available
+     */
+    std::string nextLine(const std::string& msg);
 
     int clientPort( int client );
 
